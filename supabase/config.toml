@@ -386,6 +386,11 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# Writes accomplishment-report narratives with Gemini. Needs a signed-in user (JWT) and the GEMINI_API_KEY secret.
+[functions.generate-report]
+enabled = true
+verify_jwt = true
+
 [analytics]
 enabled = true
 port = 54327
