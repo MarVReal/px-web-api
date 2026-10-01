@@ -1,0 +1,10 @@
+# Secrets and local environment (Edge Function secrets, API keys, service-role keys)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Supabase CLI local state
+supabase/.temp/
+supabase/.branches/
