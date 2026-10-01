@@ -1,5 +1,7 @@
--- DEVELOPMENT ONLY seed data. Do not run against production.
--- Demo logins (password for all: Demo1234!): admin@demo.com, sectionhead@demo.com, staff1@demo.com, staff2@demo.com
+-- DEVELOPMENT ONLY seed data. NEVER run this against a hosted or production project.
+-- This repository is public and the password below is public: any hosted project that contains these
+-- accounts can be signed into by anyone. They were removed from the production project on 2026-10-02.
+-- Local logins (password for all: Demo1234!): admin@demo.com, sectionhead@demo.com, staff1@demo.com, staff2@demo.com
 
 do $$
 declare
