@@ -183,7 +183,7 @@ export async function handle(req: Request, d: Deps): Promise<Response> {
 
     if (body.scope === 'organization') {
       const seen = new Map<string, number>();
-      sections = body.teamIds.map((id) => ({ key: id, title: names[id] ?? 'Team', tasks: infos.filter((t) => t.team === id) })).filter((s) => s.tasks.length)
+      sections = body.teamIds.map((id) => ({ key: id, title: names[id] ?? 'Section', tasks: infos.filter((t) => t.team === id) })).filter((s) => s.tasks.length)
         .map((s) => { const n = (seen.get(s.title.toLowerCase()) ?? 0) + 1; seen.set(s.title.toLowerCase(), n); return n > 1 ? { ...s, title: `${s.title} (${n})` } : s; });
     } else if (body.groupBy === 'category') {
       sections = groupByCategory(infos, body.categories);
@@ -201,10 +201,10 @@ export async function handle(req: Request, d: Deps): Promise<Response> {
 
     const result = {
       empty: false,
-      overview: parsedText.overview || fallbackOverview(subject, period, facts),
+      overview: parsedText.overview || fallbackOverview(subject, period, facts, body.scope !== 'individual'),
       sections: grouping === 'none' ? [] : prompt.sections.map((s) => ({
         key: s.key, title: s.title,
-        narrative: parsedText.sections.find((p) => p.title === s.title)?.narrative || fallbackNarrative(s),
+        narrative: parsedText.sections.find((p) => p.title === s.title)?.narrative || fallbackNarrative(s, body.scope !== 'individual'),
       })),
       task_count: infos.length, omitted: prompt.omitted, model: out.model,
     };

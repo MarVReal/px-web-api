@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import { AiError, callGemini } from '../functions/generate-report/gemini.ts';
 import { handle, USAGE_LIMITS } from '../functions/generate-report/handler.ts';
 import type { Deps, ReportData, SummaryTask, UsageRow } from '../functions/generate-report/handler.ts';
-import { buildPrompt, cleanText, groupByCategory, limitTasks, parseModelText } from '../functions/generate-report/prompt.ts';
+import { buildPrompt, cleanText, fallbackNarrative, fallbackOverview, groupByCategory, limitTasks, parseModelText } from '../functions/generate-report/prompt.ts';
 import type { TaskInfo } from '../functions/generate-report/prompt.ts';
 
 const KEY = 'TEST-SECRET-KEY-123';
@@ -88,7 +88,7 @@ test('group_by none produces a single overview and no sections', async () => {
 test('a section the model skipped gets a plain fallback instead of being empty', async () => {
   const { deps } = world({ gemini: async () => ({ text: 'OVERVIEW:\nOK.\n\nSECTION: Data Generation\nDone.', inputTokens: 1, outputTokens: 1, model: 'm' }) });
   const body = await (await handle(post(team), deps)).json();
-  assert.match(body.sections[1].narrative, /In progress: Task b/);
+  assert.match(body.sections[1].narrative, /We are currently working on: Task b/);
 });
 
 test('organization report writes one section per team', async () => {
@@ -245,4 +245,28 @@ test('parser: strips markdown, tolerates missing markers, and matches titles cas
   const r = parseModelText('Overview: Hi\nsection: a (2 tasks)\nBody', ['A', 'B']);
   assert.equal(r.overview, 'Hi');
   assert.deepEqual(r.sections, [{ title: 'A', narrative: 'Body' }, { title: 'B', narrative: '' }]);
+});
+
+test('prompt: asks for first person and never sends due dates', () => {
+  const facts = { total: 1, completed: 1, inProgress: 0, pending: 0, carriedOver: 0, delayed: 0, completionRate: 100 };
+  const secs = [{ key: 'all', title: 'All', tasks: [info('t', { dueDate: '2026-10-15', status: 'in_progress' })] }];
+  const one = buildPrompt({ scope: 'individual', subject: 'Jo', period: 'Oct', facts, sections: secs, grouping: 'none' });
+  assert.match(one.user, /Point of view: first person singular/);
+  assert.doesNotMatch(one.user, /2026-10-15/, 'due dates are not given to the model');
+  assert.doesNotMatch(one.user, /\bdue\b/i);
+  assert.match(one.system, /first person/i);
+  assert.match(one.system, /Never mention due dates/);
+  assert.doesNotMatch(one.system, /third person/i);
+  const many = buildPrompt({ scope: 'team', subject: 'Data', period: 'Oct', facts, sections: secs, grouping: 'none' });
+  assert.match(many.user, /Point of view: first person plural/);
+  assert.match(many.user, /Section accomplishment report/);
+});
+
+test('fallbacks are written in the first person', () => {
+  const sec = { key: 'a', title: 'A', tasks: [info('x', { status: 'completed' }), info('y', { status: 'in_progress' }), info('z', { status: 'pending' })] };
+  assert.equal(fallbackNarrative(sec), 'I completed: x. I am currently working on: y. I have yet to start: z.');
+  assert.equal(fallbackNarrative(sec, true), 'We completed: x. We are currently working on: y. We have yet to start: z.');
+  const f = { total: 3, completed: 1, inProgress: 1, pending: 1, carriedOver: 1, delayed: 0, completionRate: 33.3 };
+  assert.match(fallbackOverview('Jo', 'October 2026', f), /^October 2026: I completed 1 of 3 tasks \(33\.3%\)\. I am still working on 1 and have yet to start 1, with 1 carried over from an earlier period\.$/);
+  assert.match(fallbackOverview('Data', 'October 2026', f, true), /We completed 1 of 3/);
 });

@@ -19,6 +19,7 @@ The Reports page calls this function; the browser never sees the Gemini key.
 
 ## Security model
 - Org membership is always derived from `auth.uid()`; child rows get `organization_id` from their parent via triggers (client values are ignored).
+- Task details (title, description, dates, priority, category, tags, assignees) can be edited only by Admins and the Section Head of the task's section: a `tasks_guard_details` trigger plus the tag and assignee policies enforce it. Staff can still move cards (stage and position), comment and add links, and can delete their own comments and links. A task's creator has a 2-minute window to finish publishing it. Deleted comments and links are recorded in the activity log.
 - `task_activity_logs` has no write grants for clients; rows come from security-definer triggers. Internal functions are not callable via the API.
 - The frontend only ever uses the publishable key.
 
